@@ -12,9 +12,11 @@ class MemSQL(AgentCheck):
         host, port, user, password = self._get_config(instance)
         with self._connect(host, port, user, password) as db:
             try:
-                self._submit_leaves(db)
-                self._submit_aggregators(db)
-                self._submit_cluster_status(db)
+                is_aggregator = self._submit_status(db)
+                if is_aggregator:
+                    self._submit_leaves(db)
+                    self._submit_aggregators(db)
+                    self._submit_cluster_status(db)
             except Exception as e:
                 self.log.error("fail to send metrics to datadog")
 
@@ -39,6 +41,23 @@ class MemSQL(AgentCheck):
             if db:
                 db.close()
 
+    def _submit_status(self, db):
+        try:
+            res = db.query('SHOW STATUS;')
+            is_aggregator = False
+            if res is not None:
+                for i in res:
+                    variable_name = i['Variable_name'].lower()
+                    if variable_name == 'aggregator_id':
+                        is_aggregator = True
+                    elif variable_name == 'threads_connected':
+                        self.count('memsql.current_connections', int(i['Value']))
+
+            return is_aggregator
+        except Exception as e:
+            self.log.error("fail to execute _submit_status")
+            return None
+
     def _submit_leaves(self, db):
         try:
             res = db.query('SHOW LEAVES;')
@@ -47,8 +66,10 @@ class MemSQL(AgentCheck):
                 for i in res:
                     if i['State'] == 'online':
                         online_leaves += 1
-                self.gauge('memsql.leaves', len(res))
-                self.gauge('memsql.online_leaves', online_leaves)
+                    if i['Average_Roundtrip_Latency_ms'] is not None:
+                        self.gauge('memsql.roundtrip_latency', i['Average_Roundtrip_Latency_ms'], tags=["memsql_target_host:"+i['Host']])
+                self.count('memsql.leaves', len(res))
+                self.count('memsql.online_leaves', online_leaves)
 
         except Exception as e:
             self.log.error("fail to execute _submit_leaves")
@@ -71,10 +92,14 @@ class MemSQL(AgentCheck):
                         child_aggregators += 1
                         if i['State'] == 'online':
                             online_child_aggregators += 1
-                self.gauge('memsql.master_aggregators', master_aggregators)
-                self.gauge('memsql.online_master_aggregators', online_master_aggregators)
-                self.gauge('memsql.child_aggregators', child_aggregators)
-                self.gauge('memsql.online_child_aggregators', online_child_aggregators)
+                    
+                    if i['Average_Roundtrip_Latency_ms'] is not None:
+                        self.gauge('memsql.roundtrip_latency', i['Average_Roundtrip_Latency_ms'], tags=["memsql_target_host:"+i['Host']])
+
+                self.count('memsql.master_aggregators', master_aggregators)
+                self.count('memsql.online_master_aggregators', online_master_aggregators)
+                self.count('memsql.child_aggregators', child_aggregators)
+                self.count('memsql.online_child_aggregators', online_child_aggregators)
 
         except Exception as e:
             self.log.error("fail to execute _submit_aggregators")
@@ -94,9 +119,9 @@ class MemSQL(AgentCheck):
                         partitions += 1
                         if i['State'] == 'online':
                             online_partitions += 1
-                self.gauge('memsql.references', references)
-                self.gauge('memsql.partitions', partitions)
-                self.gauge('memsql.online_partitions', online_partitions)
+                self.count('memsql.references', references)
+                self.count('memsql.partitions', partitions)
+                self.count('memsql.online_partitions', online_partitions)
 
         except Exception as e:
             self.log.error("fail to execute _submit_cluster_status")
