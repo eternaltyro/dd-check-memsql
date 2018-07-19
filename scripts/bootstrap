@@ -6,26 +6,26 @@ set -o pipefail
 cd $(dirname $0)
 cd ..
 
-if test ! -f $PWD/memsql.yaml
+if test ! -f $PWD/memsqldd.yaml
 then
   echo "  + Generate memsql.yml"
-  cp $PWD/conf.d/memsql.yaml.example $HOME/.datadog-agent/memsql.yaml
+  cp $PWD/conf.d/memsql.yaml.example $HOME/.datadog-agent/memsqldd.yaml
 else
   echo "  + Already exists memsql.yml"
 fi
 
-if test ! -f $HOME/.datadog-agent/conf.d/memsql.yaml
+if test ! -f $HOME/.datadog-agent/conf.d/memsqldd.d/conf.yaml
 then
   echo "  + Symlink memsql.yml"
-  ln -s $PWD/memsql.yaml $HOME/.datadog-agent/conf.d/memsql.yaml
+  ln -s $PWD/memsql.yaml $HOME/.datadog-agent/conf.d/memsqldd.d/conf.yaml
 else
   echo "  + Agent Check config file found."
 fi
 
-if test ! -f $HOME/.datadog-agent/checks.d/memsql.py
+if test ! -f $HOME/.datadog-agent/checks.d/memsqldd.py
 then
   echo "  + Symlink memsql.py"
-  ln -s $PWD/checks.d/memsql.py $HOME/.datadog-agent/checks.d/memsql.py
+  ln -s $PWD/checks.d/memsql.py $HOME/.datadog-agent/checks.d/memsqldd.py
 else
   echo "  + Agent Check executable file found."
 fi
