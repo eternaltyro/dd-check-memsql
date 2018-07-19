@@ -7,6 +7,13 @@ This is Agent Check for Datadog for collecting metrics of MemSQL Cluster.
           we need to name the custom check something else.
 
 ## Installation
+
+Install supporting libraries
+
+```
+$ sudo apt install libmysqlclient-dev
+```
+
 Install MemSQL client.
 
 ```
@@ -23,6 +30,37 @@ Create a file `memsql.yaml` in the Agent's `conf.d/` folder.
 
 ```
 $ sudo cp ./conf.d/memsql.yaml.example /etc/dd-agent/conf.d/memsqldd.d/conf.yaml
+```
+
+Restart Datadog agent
+
+```
+# Use any relevant service manager
+$ sudo systemctl restart datadog-agent
+```
+
+## Verification
+
+Check health of Datadog-Agent
+
+```
+root@ip-172-1-2-10:/home/ubuntu# datadog-agent health
+Agent health: PASS
+=== 11 healthy components ===
+ad-autoconfig, ad-configresolver, aggregator, collector-queue, dogstatsd-main, forwarder, healthcheck, metadata-agent_checks, metadata-host, metadata-resources, tagge
+```
+
+Validate configuration
+
+```
+=== memsqldd check ===
+Source: File Configuration Provider
+Instance 1:
+host: 127.0.0.1
+port: 3306
+user: root
+~
+===
 ```
 
 ## Development
